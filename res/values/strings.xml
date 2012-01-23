@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Free Mobile Monitor</string>
+    <string name="menu_refresh">Rafraîchir</string>
+    <string name="menu_prefs">Préférences</string>
+    <string name="menu_add_account">Ajouter un compte</string>
+    <string name="menu_delete_account">Supprimer le compte</string>
+    <string name="error_sync_failed">Échec de la synchronisation</string>
+    <string name="no_account">Aucun compte configuré.</string>
+    <string name="unknown_contract">&lt;Forfait inconnu></string>
+    <string name="unknown_phone_number">&lt;Numéro inconnu></string>
+    <string name="status_step">étape %d</string>
+    <string name="unknown_status_step">étape inconnue</string>
+    <string name="status_synchronizing">Synchronisation de vos comptes…</string>
+    <string name="confirm_account_deletion">Le compte ne sera plus surveillé.</string>
+    <string name="add_account_login">Identifiant</string>
+    <string name="add_account_password">Mot de passe</string>
+    <string name="dialog_add">Ajouter</string>
+    <string name="dialog_delete">Supprimer</string>
+    <string name="dialog_cancel">Annuler</string>
+    <string name="service_sync">Service de synchronisation</string>
+    <string name="service_scheduler">Service de planification</string>
+    <string name="notif_account_updated">Un compte a été mis à jour.</string>
+    <string name="account_details">Détails du compte</string>
+    <string name="loading_page">Chargement de la page…</string>
+    <string name="page_loading_failed">Le chargement de la page a échoué.</string>
+    <string name="adding_account">Création du compte…</string>
+    <string name="account_deleted">Compte supprimé</string>
+    <string name="pref_auto_update">Mise à jour automatique</string>
+    <string name="pref_update_interval">Intervalle de mise à jour</string>
+    <string name="auto_update_enabled">Service de mise à jour activé.</string>
+    <string name="auto_update_disabled">Service de mise à jour désactivé.</string>
+
+</resources>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="update_interval_labels">
+        <item>toutes les 15 minutes</item>
+        <item>toutes les 30 minutes</item>
+        <item>toutes les heures</item>
+        <item>deux fois par jour</item>
+        <item>une fois par jour</item>
+    </string-array>
+
+    <string-array name="update_interval_values">
+        <item>900000</item>
+        <item>1800000</item>
+        <item>3600000</item>
+        <item>43200000</item>
+        <item>86400000</item>
+    </string-array>
+
+</resources>

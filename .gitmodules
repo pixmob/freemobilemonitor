@@ -1,0 +1,6 @@
+[submodule "deps/actionservice"]
+	path = deps/actionservice
+	url = http://github.com/pixmob/actionservice.git
+[submodule "deps\\ActionBarSherlock"]
+	path = deps\\ActionBarSherlock
+	url = http://github.com/JakeWharton/ActionBarSherlock.git
