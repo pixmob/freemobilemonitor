@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal" >
+
+    <fragment
+        android:id="@+id/accounts"
+        android:name="org.pixmob.fm2.ui.AccountsFragment"
+        android:layout_width="0px"
+        android:layout_height="match_parent"
+        android:layout_marginTop="7dip"
+        android:layout_weight="0.4" />
+
+    <FrameLayout
+        android:id="@+id/account_details"
+        android:layout_width="0px"
+        android:layout_height="match_parent"
+        android:layout_weight="0.6" />
+
+</LinearLayout>

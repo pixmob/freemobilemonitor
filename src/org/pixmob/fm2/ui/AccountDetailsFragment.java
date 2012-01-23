@@ -28,6 +28,7 @@ import org.pixmob.fm2.R;
 import org.pixmob.fm2.model.Account;
 import org.pixmob.fm2.model.AccountRepository;
 import org.pixmob.fm2.net.AccountNetworkClient;
+import org.pixmob.fm2.services.SyncService;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -62,6 +63,7 @@ public class AccountDetailsFragment extends Fragment implements
     private WebView webView;
     private View webLoadingPanel;
     private View webLoadingError;
+    private boolean dualPane;
     
     public static AccountDetailsFragment newInstance(Account account) {
         final Bundle args = new Bundle(1);
@@ -73,15 +75,25 @@ public class AccountDetailsFragment extends Fragment implements
         return f;
     }
     
+    public Account getAccount() {
+        return (Account) getArguments().getSerializable("account");
+    }
+    
+    public void refresh() {
+        onActionRefresh();
+    }
+    
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
-        menu.add(Menu.NONE, R.string.menu_refresh, Menu.NONE,
-            R.string.menu_refresh).setIcon(R.drawable.ic_menu_refresh)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        if (!dualPane) {
+            menu.add(Menu.NONE, R.string.menu_refresh, Menu.NONE,
+                R.string.menu_refresh).setIcon(R.drawable.ic_menu_refresh)
+                    .setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        }
         menu.add(Menu.NONE, R.string.menu_delete_account, Menu.NONE,
             R.string.menu_delete_account).setIcon(R.drawable.ic_menu_delete)
-                .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+                .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
     }
     
     @Override
@@ -112,6 +124,11 @@ public class AccountDetailsFragment extends Fragment implements
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
+        
+        final View detailsFrame = getActivity().findViewById(
+            R.id.account_details);
+        dualPane = detailsFrame != null
+                && detailsFrame.getVisibility() == View.VISIBLE;
         
         setHasOptionsMenu(true);
         
@@ -158,7 +175,8 @@ public class AccountDetailsFragment extends Fragment implements
     
     @Override
     public Loader<Set<String>> onCreateLoader(int id, Bundle args) {
-        final Account account = (Account) args.getSerializable("account");
+        final Account account = args != null ? (Account) args
+                .getSerializable("account") : null;
         return new GetAuthCookies(getActivity(), account);
     }
     
@@ -168,22 +186,25 @@ public class AccountDetailsFragment extends Fragment implements
     
     @Override
     public void onLoadFinished(Loader<Set<String>> loader, Set<String> cookies) {
-        // Build the Http Cookie header.
-        final StringBuilder cookieHeader = new StringBuilder(128);
-        for (final String cookie : cookies) {
-            if (cookieHeader.length() != 0) {
-                cookieHeader.append("; ");
+        if (cookies != null && !cookies.isEmpty()) {
+            // Build the Http Cookie header.
+            final StringBuilder cookieHeader = new StringBuilder(128);
+            for (final String cookie : cookies) {
+                if (cookieHeader.length() != 0) {
+                    cookieHeader.append("; ");
+                }
+                cookieHeader.append(cookie);
             }
-            cookieHeader.append(cookie);
+            
+            final Map<String, String> httpHeaders = new HashMap<String, String>(
+                    1);
+            httpHeaders.put("Cookie", cookieHeader.toString());
+            
+            // Load the account URL with authentication cookies.
+            webView.loadUrl(
+                "https://mobile.free.fr/moncompte/index.php?page=commande",
+                httpHeaders);
         }
-        
-        final Map<String, String> httpHeaders = new HashMap<String, String>(1);
-        httpHeaders.put("Cookie", cookieHeader.toString());
-        
-        // Load the account URL with authentication cookies.
-        webView.loadUrl(
-            "https://mobile.free.fr/moncompte/index.php?page=commande",
-            httpHeaders);
     }
     
     /**
@@ -212,11 +233,13 @@ public class AccountDetailsFragment extends Fragment implements
         
         @Override
         public Set<String> loadInBackground() {
-            try {
-                return authenticate();
-            } catch (IOException e) {
-                Log.e(TAG, "Cannot load authentication cookies for user "
-                        + account.login, e);
+            if (account != null) {
+                try {
+                    return authenticate();
+                } catch (IOException e) {
+                    Log.e(TAG, "Cannot load authentication cookies for user "
+                            + account.login, e);
+                }
             }
             return Collections.emptySet();
         }
@@ -257,11 +280,13 @@ public class AccountDetailsFragment extends Fragment implements
                             @Override
                             public void onClick(DialogInterface dialog,
                                     int which) {
+                                final boolean dualPane = getSupportFragmentManager()
+                                        .findFragmentById(R.id.accounts) != null;
                                 final Account account = (Account) getArguments()
                                         .getSerializable("account");
                                 new DeleteAccountTask(getActivity()
-                                        .getApplicationContext(), account)
-                                        .execute();
+                                        .getApplicationContext(), account,
+                                        dualPane).execute();
                             }
                         }).setNegativeButton(R.string.dialog_cancel, null)
                     .create();
@@ -275,10 +300,13 @@ public class AccountDetailsFragment extends Fragment implements
     private static class DeleteAccountTask extends AsyncTask<Void, Void, Void> {
         private final Context context;
         private final Account account;
+        private final boolean dualPane;
         
-        public DeleteAccountTask(final Context context, final Account account) {
+        public DeleteAccountTask(final Context context, final Account account,
+                final boolean dualPane) {
             this.context = context;
             this.account = account;
+            this.dualPane = dualPane;
         }
         
         @Override
@@ -299,10 +327,15 @@ public class AccountDetailsFragment extends Fragment implements
             Toast.makeText(context,
                 context.getString(R.string.account_deleted), Toast.LENGTH_SHORT)
                     .show();
-            context.startActivity(new Intent(context, FM2.class)
-                    .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
-                            | Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            | Intent.FLAG_ACTIVITY_NEW_TASK));
+            
+            if (dualPane) {
+                context.startService(new Intent(context, SyncService.class));
+            } else {
+                context.startActivity(new Intent(context, FM2.class)
+                        .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                | Intent.FLAG_ACTIVITY_NEW_TASK));
+            }
         }
     }
 }

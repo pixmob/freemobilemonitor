@@ -37,8 +37,10 @@ import android.content.ServiceConnection;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.SystemClock;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.ListFragment;
 import android.support.v4.app.LoaderManager.LoaderCallbacks;
 import android.support.v4.content.AsyncTaskLoader;
@@ -64,6 +66,8 @@ public class AccountsFragment extends ListFragment implements
     private AccountAdapter accountAdapter;
     private SyncService syncService;
     private Intent syncServiceIntent;
+    private boolean dualPane;
+    private int selectedAccountIndex;
     
     @Override
     public void onSyncDone() {
@@ -111,6 +115,26 @@ public class AccountsFragment extends ListFragment implements
         } else {
             setListShownNoAnimation(true);
         }
+        
+        if (dualPane) {
+            getListView().setItemChecked(selectedAccountIndex, false);
+            
+            new Thread() {
+                @Override
+                public void run() {
+                    SystemClock.sleep(1000);
+                    
+                    final AccountDetailsFragment details = (AccountDetailsFragment) getSupportFragmentManager()
+                            .findFragmentById(R.id.account_details);
+                    if (details != null) {
+                        final FragmentTransaction ft = getSupportFragmentManager()
+                                .beginTransaction();
+                        ft.remove(details);
+                        ft.commit();
+                    }
+                }
+            }.start();
+        }
     }
     
     @Override
@@ -126,8 +150,28 @@ public class AccountsFragment extends ListFragment implements
         setListAdapter(accountAdapter);
         setListShown(false);
         
+        final View detailsFrame = getActivity().findViewById(
+            R.id.account_details);
+        dualPane = detailsFrame != null
+                && detailsFrame.getVisibility() == View.VISIBLE;
+        
+        if (savedInstanceState != null) {
+            selectedAccountIndex = savedInstanceState.getInt(
+                "selectedAccountIndex", 0);
+        }
+        
+        if (dualPane) {
+            getListView().setChoiceMode(ListView.CHOICE_MODE_SINGLE);
+        }
+        
         // Start user account loading.
         getLoaderManager().initLoader(0, null, this);
+    }
+    
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt("selectedAccountIndex", selectedAccountIndex);
     }
     
     @Override
@@ -189,18 +233,59 @@ public class AccountsFragment extends ListFragment implements
     @Override
     public void onListItemClick(ListView l, View v, int position, long id) {
         super.onListItemClick(l, v, position, id);
-        
-        final Account account = accountAdapter.getItem(position);
-        setSelection(position);
-        
-        // Open account details.
-        startActivity(new Intent(getActivity(), AccountDetails.class).putExtra(
-            AccountDetails.EXTRA_ACCOUNT, account));
+        selectAccount(position);
+    }
+    
+    private void selectAccount(int position) {
+        if (position >= accountAdapter.getCount()
+                || accountAdapter.getCount() == 0) {
+            selectedAccountIndex = 0;
+            if (dualPane) {
+                final AccountDetailsFragment details = (AccountDetailsFragment) getSupportFragmentManager()
+                        .findFragmentById(R.id.account_details);
+                if (details != null) {
+                    final FragmentTransaction ft = getSupportFragmentManager()
+                            .beginTransaction();
+                    ft.remove(details);
+                    ft.commit();
+                }
+            }
+        } else {
+            selectedAccountIndex = position;
+            
+            final Account account = accountAdapter.getItem(position);
+            if (dualPane) {
+                getListView().setItemChecked(position, true);
+                
+                // Display account details in a fragment.
+                AccountDetailsFragment details = (AccountDetailsFragment) getSupportFragmentManager()
+                        .findFragmentById(R.id.account_details);
+                if (details == null || details.getAccount().id != account.id) {
+                    details = AccountDetailsFragment.newInstance(account);
+                    
+                    final FragmentTransaction ft = getSupportFragmentManager()
+                            .beginTransaction();
+                    ft.replace(R.id.account_details, details);
+                    ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE);
+                    ft.commit();
+                }
+            } else {
+                // Open account details with a new activity.
+                startActivity(new Intent(getActivity(), AccountDetails.class)
+                        .putExtra(AccountDetails.EXTRA_ACCOUNT, account));
+            }
+        }
     }
     
     private void onActionRefresh() {
         // Start the synchronization service in background.
         getActivity().startService(syncServiceIntent);
+        
+        final AccountDetailsFragment details = (AccountDetailsFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.account_details);
+        if (details != null) {
+            details.refresh();
+        }
     }
     
     private void onActionAddAccount() {
@@ -302,6 +387,8 @@ public class AccountsFragment extends ListFragment implements
      */
     private static class AccountListLoader extends
             AsyncTaskLoader<List<Account>> {
+        private List<Account> accounts;
+        
         public AccountListLoader(final Context context) {
             super(context);
         }
@@ -317,21 +404,27 @@ public class AccountsFragment extends ListFragment implements
         
         @Override
         public List<Account> loadInBackground() {
+            if (accounts != null) {
+                deliverResult(accounts);
+            }
+            
             if (DEBUG) {
                 Log.d(TAG, "Loading user accounts");
             }
-            List<Account> accounts = Collections.emptyList();
+            List<Account> newAccounts = Collections.emptyList();
             final AccountRepository accountRepository = new AccountRepository(
                     getContext());
             try {
-                accounts = accountRepository.list();
-                Collections.sort(accounts, AccountComparator.INSTANCE);
+                newAccounts = accountRepository.list();
+                Collections.sort(newAccounts, AccountComparator.INSTANCE);
             } catch (Exception e) {
                 Log.e(TAG, "Account loading failed", e);
             } finally {
                 accountRepository.dispose();
             }
-            return accounts;
+            
+            accounts = newAccounts;
+            return newAccounts;
         }
     }
     
