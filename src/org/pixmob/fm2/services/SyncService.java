@@ -175,6 +175,11 @@ public class SyncService extends ActionService {
     }
     
     @Override
+    protected void onActionError(Intent intent, Exception error) {
+        Log.wtf(TAG, "Background account synchronization failed", error);
+    }
+    
+    @Override
     protected void onHandleAction(Intent intent)
             throws ActionExecutionFailedException, InterruptedException {
         if (!isNetworkConnected()) {
