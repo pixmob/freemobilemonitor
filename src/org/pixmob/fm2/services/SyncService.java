@@ -261,6 +261,7 @@ public class SyncService extends ActionService {
             n.setLatestEventInfo(this, getString(R.string.app_name),
                 getString(R.string.notif_account_updated), openUI);
             n.defaults = Notification.DEFAULT_ALL;
+            n.flags = Notification.FLAG_AUTO_CANCEL;
             
             final NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
             nm.notify(R.string.notif_account_updated, n);
