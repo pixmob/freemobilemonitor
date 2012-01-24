@@ -332,12 +332,14 @@ public class AccountsFragment extends ListFragment implements
          * <code>null</code>, the list is cleared.
          */
         public void setData(List<Account> accounts) {
+            setNotifyOnChange(false);
             clear();
             if (accounts != null) {
                 for (final Account account : accounts) {
                     add(account);
                 }
             }
+            notifyDataSetChanged();
         }
         
         @Override
