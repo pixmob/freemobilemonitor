@@ -222,32 +222,26 @@ public class SyncService extends ActionService {
         boolean tryLater = false;
         
         final AccountRepository accountRepository = new AccountRepository(this);
-        try {
-            final List<Account> accounts = accountRepository.list();
-            for (final Account account : accounts) {
-                Log.i(TAG, "Synchronizing account for user " + account.login);
+        final List<Account> accounts = accountRepository.list();
+        for (final Account account : accounts) {
+            Log.i(TAG, "Synchronizing account for user " + account.login);
+            
+            final int accountStatusBeforeUpdate = account.status;
+            
+            try {
+                // Read account data from the website.
+                accountNetworkClient.update(account);
                 
-                final int accountStatusBeforeUpdate = account.status;
+                // Update the local database.
+                accountRepository.update(account);
                 
-                try {
-                    // Read account data from the website.
-                    accountNetworkClient.update(account);
-                    
-                    // Update the local database.
-                    accountRepository.update(account);
-                    
-                    if (trackUpdates
-                            && account.status != accountStatusBeforeUpdate) {
-                        accountsUpdated = true;
-                    }
-                } catch (IOException e) {
-                    Log.w(TAG, "Account update failed for user "
-                            + account.login, e);
-                    tryLater = true;
+                if (trackUpdates && account.status != accountStatusBeforeUpdate) {
+                    accountsUpdated = true;
                 }
+            } catch (IOException e) {
+                Log.w(TAG, "Account update failed for user " + account.login, e);
+                tryLater = true;
             }
-        } finally {
-            accountRepository.dispose();
         }
         
         if (accountsUpdated) {

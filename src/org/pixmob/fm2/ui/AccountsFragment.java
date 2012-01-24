@@ -419,8 +419,6 @@ public class AccountsFragment extends ListFragment implements
                 Collections.sort(newAccounts, AccountComparator.INSTANCE);
             } catch (Exception e) {
                 Log.e(TAG, "Account loading failed", e);
-            } finally {
-                accountRepository.dispose();
             }
             
             accounts = newAccounts;
@@ -507,11 +505,7 @@ public class AccountsFragment extends ListFragment implements
         protected Void doInBackground(Void... params) {
             final AccountRepository accountRepository = new AccountRepository(
                     context);
-            try {
-                accountRepository.create(login, password);
-            } finally {
-                accountRepository.dispose();
-            }
+            accountRepository.create(login, password);
             return null;
         }
         

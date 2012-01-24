@@ -20,6 +20,9 @@ import static org.pixmob.fm2.Constants.TAG;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -34,18 +37,19 @@ import android.util.Log;
  */
 public class AccountRepository {
     private static final String ACCOUNTS_TABLE = "accounts";
-    private final SQLiteDatabase db;
+    private static final Lock READ_LOCK;
+    private static final Lock WRITE_LOCK;
     
-    public AccountRepository(final Context context) {
-        db = new DbHelper(context).getWritableDatabase();
+    static {
+        final ReadWriteLock rwl = new ReentrantReadWriteLock();
+        READ_LOCK = rwl.readLock();
+        WRITE_LOCK = rwl.writeLock();
     }
     
-    /**
-     * Close the local database. This method should be called when the
-     * repository is no longer used, in order to free resources.
-     */
-    public void dispose() {
-        db.close();
+    private final SQLiteOpenHelper dbHelper;
+    
+    public AccountRepository(final Context context) {
+        dbHelper = new DbHelper(context);
     }
     
     /**
@@ -53,30 +57,38 @@ public class AccountRepository {
      */
     public List<Account> list() {
         final List<Account> accounts = new ArrayList<Account>(4);
-        db.beginTransaction();
-        Cursor c = null;
+        
+        final SQLiteDatabase db = dbHelper.getReadableDatabase();
         try {
-            c = db.query(ACCOUNTS_TABLE,
-                new String[] { "id", "name", "phone_number", "login",
-                        "password", "status", "timestamp" }, null, null, null,
-                null, "name");
-            
-            while (c.moveToNext()) {
-                final Account account = new Account();
-                account.id = c.getInt(0);
-                account.name = c.getString(1);
-                account.phoneNumber = c.getString(2);
-                account.login = c.getString(3);
-                account.password = c.getString(4);
-                account.status = c.getInt(5);
-                account.timestamp = c.getLong(6);
-                accounts.add(account);
+            READ_LOCK.lock();
+            db.beginTransaction();
+            Cursor c = null;
+            try {
+                c = db.query(ACCOUNTS_TABLE, new String[] { "id", "name",
+                        "phone_number", "login", "password", "status",
+                        "timestamp" }, null, null, null, null, "name");
+                
+                while (c.moveToNext()) {
+                    final Account account = new Account();
+                    account.id = c.getInt(0);
+                    account.name = c.getString(1);
+                    account.phoneNumber = c.getString(2);
+                    account.login = c.getString(3);
+                    account.password = c.getString(4);
+                    account.status = c.getInt(5);
+                    account.timestamp = c.getLong(6);
+                    accounts.add(account);
+                }
+                db.setTransactionSuccessful();
+            } finally {
+                if (c != null) {
+                    c.close();
+                }
+                db.endTransaction();
             }
         } finally {
-            if (c != null) {
-                c.close();
-            }
-            db.endTransaction();
+            db.close();
+            READ_LOCK.unlock();
         }
         
         return accounts;
@@ -97,30 +109,44 @@ public class AccountRepository {
         cv.put("login", login);
         cv.put("password", password);
         
-        db.beginTransaction();
+        final SQLiteDatabase db = dbHelper.getWritableDatabase();
         try {
-            db.insertOrThrow(ACCOUNTS_TABLE, "id", cv);
-            db.setTransactionSuccessful();
+            WRITE_LOCK.lock();
+            db.beginTransaction();
+            try {
+                db.insertOrThrow(ACCOUNTS_TABLE, "id", cv);
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
         } finally {
-            db.endTransaction();
+            db.close();
+            WRITE_LOCK.unlock();
         }
     }
     
     /**
-     * Remove an account.
+     * Delete an account.
      */
     public void delete(Account account) {
         if (DEBUG) {
             Log.d(TAG, "Deleting account: " + account.login);
         }
         
-        db.beginTransaction();
+        final SQLiteDatabase db = dbHelper.getWritableDatabase();
         try {
-            db.delete(ACCOUNTS_TABLE, "id=?",
-                new String[] { String.valueOf(account.id) });
-            db.setTransactionSuccessful();
+            WRITE_LOCK.lock();
+            db.beginTransaction();
+            try {
+                db.delete(ACCOUNTS_TABLE, "id=?",
+                    new String[] { String.valueOf(account.id) });
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
         } finally {
-            db.endTransaction();
+            db.close();
+            WRITE_LOCK.unlock();
         }
     }
     
@@ -138,13 +164,20 @@ public class AccountRepository {
         cv.put("status", account.status);
         cv.put("timestamp", account.timestamp);
         
-        db.beginTransaction();
+        final SQLiteDatabase db = dbHelper.getWritableDatabase();
         try {
-            db.update(ACCOUNTS_TABLE, cv, "id=?",
-                new String[] { String.valueOf(account.id) });
-            db.setTransactionSuccessful();
+            WRITE_LOCK.lock();
+            db.beginTransaction();
+            try {
+                db.update(ACCOUNTS_TABLE, cv, "id=?",
+                    new String[] { String.valueOf(account.id) });
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
         } finally {
-            db.endTransaction();
+            db.close();
+            WRITE_LOCK.unlock();
         }
     }
     

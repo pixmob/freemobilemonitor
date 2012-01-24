@@ -313,11 +313,7 @@ public class AccountDetailsFragment extends Fragment implements
         protected Void doInBackground(Void... params) {
             final AccountRepository accountRepository = new AccountRepository(
                     context);
-            try {
-                accountRepository.delete(account);
-            } finally {
-                accountRepository.dispose();
-            }
+            accountRepository.delete(account);
             return null;
         }
         
