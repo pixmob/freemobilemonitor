@@ -17,6 +17,8 @@ package org.pixmob.fm2.util;
 
 import static org.pixmob.fm2.Constants.APPLICATION_NAME_USER_AGENT;
 import static org.pixmob.fm2.Constants.DEBUG;
+import static org.pixmob.fm2.Constants.SHARED_PREFS;
+import static org.pixmob.fm2.Constants.SP_KEY_DISABLE_CERTIFICATE_CHECK;
 import static org.pixmob.fm2.Constants.TAG;
 
 import java.io.IOException;
@@ -40,6 +42,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Build;
 import android.util.Log;
@@ -52,8 +55,6 @@ public final class HttpUtils {
     private static String applicationVersion;
     
     static {
-        trustAllHosts();
-        
         // Disable connection pooling:
         // http://stackoverflow.com/a/4261005/422906
         System.setProperty("http.keepAlive", "false");
@@ -80,6 +81,10 @@ public final class HttpUtils {
      */
     public static HttpURLConnection newRequest(Context context, String uri,
             Set<String> cookies) throws IOException {
+        if (DEBUG) {
+            Log.d(TAG, "Setup connection to " + uri);
+        }
+        
         final HttpURLConnection conn = (HttpURLConnection) new URL(uri)
                 .openConnection();
         conn.setUseCaches(true);
@@ -93,16 +98,19 @@ public final class HttpUtils {
         // connections, resulting in slow reads.
         conn.setRequestProperty("Connection", "close");
         
-        if (conn instanceof HttpsURLConnection) {
-            if (DEBUG) {
-                Log.d(TAG, "Disabling SSL host name verifier "
-                        + "before connecting to " + uri);
+        final SharedPreferences prefs = context.getSharedPreferences(
+            SHARED_PREFS, Context.MODE_PRIVATE);
+        final boolean disableCertificateCheck = prefs.getBoolean(
+            SP_KEY_DISABLE_CERTIFICATE_CHECK, false);
+        
+        if (disableCertificateCheck) {
+            if (conn instanceof HttpsURLConnection) {
+                if (DEBUG) {
+                    Log.d(TAG, "Disabling SSL certificate check "
+                            + "before connecting to " + uri);
+                }
+                disableCertificateCheck((HttpsURLConnection) conn);
             }
-            
-            // Some Android devices (H**) has trouble with SSL:
-            // as a workaround, we trust every host names.
-            final HttpsURLConnection sConn = (HttpsURLConnection) conn;
-            sConn.setHostnameVerifier(AcceptAllHostnamesVerifier.INSTANCE);
         }
         
         if (cookies != null) {
@@ -188,8 +196,11 @@ public final class HttpUtils {
      * Trust every server: do not check for any certificate. From:
      * http://stackoverflow.com/a/1000205/422906.
      */
-    private static void trustAllHosts() {
-        Log.i(TAG, "Disabling SSL certificate check");
+    private static void disableCertificateCheck(HttpsURLConnection conn) {
+        // Some Android devices (H**) has trouble with SSL:
+        // as a workaround, we trust every host names.
+        final HttpsURLConnection sConn = (HttpsURLConnection) conn;
+        sConn.setHostnameVerifier(AcceptAllHostnamesVerifier.INSTANCE);
         
         // Create a trust manager that does not validate certificate chains.
         TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
@@ -213,8 +224,7 @@ public final class HttpUtils {
         try {
             SSLContext sc = SSLContext.getInstance("TLS");
             sc.init(null, trustAllCerts, new java.security.SecureRandom());
-            HttpsURLConnection
-                    .setDefaultSSLSocketFactory(sc.getSocketFactory());
+            conn.setSSLSocketFactory(sc.getSocketFactory());
         } catch (Exception e) {
             Log.w(TAG, "SSL engine setup error", e);
         }

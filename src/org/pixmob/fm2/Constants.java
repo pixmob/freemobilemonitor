@@ -50,6 +50,11 @@ public final class Constants {
      */
     public static final String SP_KEY_PERFORM_UPDATES = "performUpdates";
     
+    /**
+     * Preference key: disable SSL certificate check.
+     */
+    public static final String SP_KEY_DISABLE_CERTIFICATE_CHECK = "disableCertificateCheck";
+    
     private Constants() {
     }
 }
