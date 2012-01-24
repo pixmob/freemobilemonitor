@@ -16,6 +16,7 @@
 package org.pixmob.fm2.util;
 
 import static org.pixmob.fm2.Constants.APPLICATION_NAME_USER_AGENT;
+import static org.pixmob.fm2.Constants.DEBUG;
 import static org.pixmob.fm2.Constants.TAG;
 
 import java.io.IOException;
@@ -52,6 +53,10 @@ public final class HttpUtils {
     
     static {
         trustAllHosts();
+        
+        // Disable connection pooling:
+        // http://stackoverflow.com/a/4261005/422906
+        System.setProperty("http.keepAlive", "false");
     }
     
     private HttpUtils() {
@@ -84,7 +89,16 @@ public final class HttpUtils {
         conn.setRequestProperty("Accept-Encoding", "gzip");
         conn.setRequestProperty("User-Agent", generateUserAgent(context));
         
+        // Disable connection pooling: some Android devices try to reuse closed
+        // connections, resulting in slow reads.
+        conn.setRequestProperty("Connection", "close");
+        
         if (conn instanceof HttpsURLConnection) {
+            if (DEBUG) {
+                Log.d(TAG, "Disabling SSL host name verifier "
+                        + "before connecting to " + uri);
+            }
+            
             // Some Android devices (H**) has trouble with SSL:
             // as a workaround, we trust every host names.
             final HttpsURLConnection sConn = (HttpsURLConnection) conn;
@@ -175,6 +189,8 @@ public final class HttpUtils {
      * http://stackoverflow.com/a/1000205/422906.
      */
     private static void trustAllHosts() {
+        Log.i(TAG, "Disabling SSL certificate check");
+        
         // Create a trust manager that does not validate certificate chains.
         TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
             @Override
