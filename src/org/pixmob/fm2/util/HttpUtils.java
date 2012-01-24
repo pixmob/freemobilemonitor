@@ -16,6 +16,7 @@
 package org.pixmob.fm2.util;
 
 import static org.pixmob.fm2.Constants.APPLICATION_NAME_USER_AGENT;
+import static org.pixmob.fm2.Constants.TAG;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,14 +24,24 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
 import android.content.Context;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Build;
+import android.util.Log;
 
 /**
  * Http utilities.
@@ -38,6 +49,10 @@ import android.os.Build;
  */
 public final class HttpUtils {
     private static String applicationVersion;
+    
+    static {
+        trustAllHosts();
+    }
     
     private HttpUtils() {
     }
@@ -68,6 +83,13 @@ public final class HttpUtils {
         conn.setReadTimeout(90000);
         conn.setRequestProperty("Accept-Encoding", "gzip");
         conn.setRequestProperty("User-Agent", generateUserAgent(context));
+        
+        if (conn instanceof HttpsURLConnection) {
+            // Some Android devices (H**) has trouble with SSL:
+            // as a workaround, we trust every host names.
+            final HttpsURLConnection sConn = (HttpsURLConnection) conn;
+            sConn.setHostnameVerifier(AcceptAllHostnamesVerifier.INSTANCE);
+        }
         
         if (cookies != null) {
             final StringBuilder buf = new StringBuilder(128);
@@ -148,4 +170,51 @@ public final class HttpUtils {
                 + Build.VERSION.RELEASE + "/" + Build.VERSION.SDK_INT + ")";
     }
     
+    /**
+     * Trust every server: do not check for any certificate. From:
+     * http://stackoverflow.com/a/1000205/422906.
+     */
+    private static void trustAllHosts() {
+        // Create a trust manager that does not validate certificate chains.
+        TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
+            @Override
+            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                return new java.security.cert.X509Certificate[] {};
+            }
+            
+            @Override
+            public void checkClientTrusted(X509Certificate[] chain,
+                    String authType) throws CertificateException {
+            }
+            
+            @Override
+            public void checkServerTrusted(X509Certificate[] chain,
+                    String authType) throws CertificateException {
+            }
+        } };
+        
+        // Install the all-trusting trust manager.
+        try {
+            SSLContext sc = SSLContext.getInstance("TLS");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            HttpsURLConnection
+                    .setDefaultSSLSocketFactory(sc.getSocketFactory());
+        } catch (Exception e) {
+            Log.w(TAG, "SSL engine setup error", e);
+        }
+    }
+    
+    /**
+     * {@link HostnameVerifier} accepting every host names.
+     * @author Pixmob
+     */
+    private final static class AcceptAllHostnamesVerifier implements
+            HostnameVerifier {
+        public static final HostnameVerifier INSTANCE = new AcceptAllHostnamesVerifier();
+        
+        @Override
+        public boolean verify(String hostname, SSLSession session) {
+            return true;
+        }
+    }
 }
