@@ -15,9 +15,13 @@
  */
 package org.pixmob.fm2.services;
 
+import static org.pixmob.fm2.Constants.DEBUG;
 import static org.pixmob.fm2.Constants.TAG;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.lang.ref.WeakReference;
 import java.util.List;
 
@@ -28,6 +32,7 @@ import org.pixmob.fm2.model.Account;
 import org.pixmob.fm2.model.AccountRepository;
 import org.pixmob.fm2.net.AccountNetworkClient;
 import org.pixmob.fm2.ui.FM2;
+import org.pixmob.fm2.util.IOUtils;
 
 import android.app.AlarmManager;
 import android.app.Notification;
@@ -37,6 +42,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
@@ -176,6 +182,45 @@ public class SyncService extends ActionService {
     
     @Override
     protected void onActionError(Intent intent, Exception error) {
+        Log.wtf(TAG, "Background account synchronization failed", error);
+    }
+    
+    @Override
+    protected void onActionError(Intent intent, Exception error) {
+        if (Environment.MEDIA_MOUNTED.equals(Environment
+                .getExternalStorageState())) {
+            final File errorLogDir = new File(
+                    Environment.getExternalStorageDirectory(), "fm2");
+            if (!errorLogDir.exists()) {
+                if (!errorLogDir.mkdirs()) {
+                    if (DEBUG) {
+                        Log.d(TAG, "Cannot create directory for error log: "
+                                + errorLogDir.getAbsolutePath());
+                    }
+                    return;
+                }
+            }
+            
+            final File errorLog = new File(errorLogDir, "error.log");
+            Log.i(TAG, "Writing error log to " + errorLog.getAbsolutePath());
+            PrintStream output = null;
+            try {
+                output = new PrintStream(new FileOutputStream(errorLog), true);
+                error.printStackTrace(output);
+            } catch (IOException e) {
+                Log.w(TAG,
+                    "Cannot write error log to " + errorLog.getAbsolutePath(),
+                    e);
+            } finally {
+                IOUtils.close(output);
+            }
+        } else {
+            if (DEBUG) {
+                Log.d(TAG, "Cannot write error log since "
+                        + "external storage is not available");
+            }
+        }
+        
         Log.wtf(TAG, "Background account synchronization failed", error);
     }
     
