@@ -249,8 +249,7 @@ public class SyncService extends ActionService {
             
             final PendingIntent openUI = PendingIntent.getActivity(this, 0,
                 new Intent(this, FM2.class)
-                        .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                | Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                        .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP),
                 PendingIntent.FLAG_CANCEL_CURRENT);
             
             final Notification n = new Notification(

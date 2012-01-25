@@ -328,9 +328,7 @@ public class AccountDetailsFragment extends Fragment implements
                 context.startService(new Intent(context, SyncService.class));
             } else {
                 context.startActivity(new Intent(context, FM2.class)
-                        .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                | Intent.FLAG_ACTIVITY_SINGLE_TOP
-                                | Intent.FLAG_ACTIVITY_NEW_TASK));
+                        .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP));
             }
         }
     }
