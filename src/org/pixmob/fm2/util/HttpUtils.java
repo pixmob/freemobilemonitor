@@ -92,7 +92,7 @@ public final class HttpUtils {
         conn.setConnectTimeout(30000);
         conn.setReadTimeout(90000);
         conn.setRequestProperty("Accept-Encoding", "gzip");
-        conn.setRequestProperty("User-Agent", generateUserAgent(context));
+        conn.setRequestProperty("User-Agent", getUserAgent(context));
         conn.setRequestProperty("Cache-Control", "max-age=0");
         conn.setDoInput(true);
         
@@ -180,7 +180,7 @@ public final class HttpUtils {
     /**
      * Get Http User Agent for this application.
      */
-    private static final String generateUserAgent(Context context) {
+    public static final String getUserAgent(Context context) {
         if (applicationVersion == null) {
             try {
                 applicationVersion = context.getPackageManager()

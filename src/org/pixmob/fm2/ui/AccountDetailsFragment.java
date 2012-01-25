@@ -29,6 +29,7 @@ import org.pixmob.fm2.model.Account;
 import org.pixmob.fm2.model.AccountRepository;
 import org.pixmob.fm2.net.AccountNetworkClient;
 import org.pixmob.fm2.services.SyncService;
+import org.pixmob.fm2.util.HttpUtils;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -137,6 +138,10 @@ public class AccountDetailsFragment extends Fragment implements
         webLoadingPanel = getView()
                 .findViewById(R.id.account_web_loading_panel);
         webView = (WebView) getView().findViewById(R.id.account_web);
+        webView.getSettings().setBuiltInZoomControls(true);
+        webView.getSettings().setJavaScriptEnabled(true);
+        webView.getSettings().setUserAgentString(
+            HttpUtils.getUserAgent(getActivity()));
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
