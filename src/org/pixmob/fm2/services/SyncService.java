@@ -49,7 +49,7 @@ import android.util.Log;
 public class SyncService extends ActionService {
     public static final String EXTRA_TRACK_UPDATES = "trackUpdates";
     private static final String EXTRA_RETRY_COUNT = "retryCount";
-    private static final int RETRY_MAX = 3;
+    private static final int RETRY_MAX = 2;
     private static final long RETRY_PERIOD = 1000 * 60 * 3;
     private static final int SYNC_DONE = 1;
     private static final int SYNC_ERROR = 2;
@@ -283,9 +283,8 @@ public class SyncService extends ActionService {
                         EXTRA_RETRY_COUNT, retryCount),
                     PendingIntent.FLAG_CANCEL_CURRENT);
                 final AlarmManager am = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-                am.setInexactRepeating(AlarmManager.RTC_WAKEUP,
-                    System.currentTimeMillis() + RETRY_PERIOD, RETRY_PERIOD,
-                    syncLaterIntent);
+                am.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis()
+                        + RETRY_PERIOD, syncLaterIntent);
             }
         }
     }
