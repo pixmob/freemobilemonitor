@@ -45,7 +45,7 @@
         android:gravity="bottom"
         android:text="étape 3"
         android:textAppearance="?android:attr/textAppearanceMedium"
-        android:textColor="@color/step_color"
+        android:textColor="@color/status_color"
         android:textStyle="bold" />
 
 </RelativeLayout>
