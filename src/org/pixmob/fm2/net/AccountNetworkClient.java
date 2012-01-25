@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.zip.GZIPInputStream;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -88,6 +87,7 @@ public class AccountNetworkClient {
             "https://mobile.free.fr/moncompte/index.php?page=commande", params,
             CHARSET);
         try {
+            conn.connect();
             final int sc = conn.getResponseCode();
             if (DEBUG) {
                 Log.d(TAG, "Got response: " + sc);
@@ -115,6 +115,7 @@ public class AccountNetworkClient {
                     "https://mobile.free.fr/moncompte/index.php?page=commande",
                     cookies);
         try {
+            conn.connect();
             final int sc = conn.getResponseCode();
             if (DEBUG) {
                 Log.d(TAG, "Got response: " + sc);
@@ -128,8 +129,7 @@ public class AccountNetworkClient {
             final File outputDir = context.getCacheDir();
             final File outputFile = new File(outputDir, "account_" + userLogin
                     + ".html");
-            IOUtils.writeToFile(new GZIPInputStream(conn.getInputStream()),
-                outputFile);
+            IOUtils.writeToFile(HttpUtils.getInputStream(conn), outputFile);
             
             if (DEBUG) {
                 Log.d(TAG,
@@ -148,6 +148,7 @@ public class AccountNetworkClient {
         final HttpURLConnection conn = HttpUtils.newRequest(context,
             "https://mobile.free.fr/moncompte/index.php?act=logout", cookies);
         try {
+            conn.connect();
             final int sc = conn.getResponseCode();
             if (DEBUG) {
                 Log.d(TAG, "Got response: " + sc);
