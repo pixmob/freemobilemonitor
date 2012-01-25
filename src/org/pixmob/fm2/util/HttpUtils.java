@@ -87,12 +87,14 @@ public final class HttpUtils {
         
         final HttpURLConnection conn = (HttpURLConnection) new URL(uri)
                 .openConnection();
-        conn.setUseCaches(true);
+        conn.setUseCaches(false);
         conn.setInstanceFollowRedirects(false);
         conn.setConnectTimeout(30000);
         conn.setReadTimeout(90000);
         conn.setRequestProperty("Accept-Encoding", "gzip");
         conn.setRequestProperty("User-Agent", generateUserAgent(context));
+        conn.setRequestProperty("Cache-Control", "max-age=0");
+        conn.setDoInput(true);
         
         // Disable connection pooling: some Android devices try to reuse closed
         // connections, resulting in slow reads.
