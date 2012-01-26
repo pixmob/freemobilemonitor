@@ -31,6 +31,7 @@ import org.pixmob.fm2.net.AccountNetworkClient;
 import org.pixmob.fm2.services.SyncService;
 import org.pixmob.fm2.util.HttpUtils;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
@@ -289,8 +290,7 @@ public class AccountDetailsFragment extends Fragment implements
                                         .findFragmentById(R.id.accounts) != null;
                                 final Account account = (Account) getArguments()
                                         .getSerializable("account");
-                                new DeleteAccountTask(getActivity()
-                                        .getApplicationContext(), account,
+                                new DeleteAccountTask(getActivity(), account,
                                         dualPane).execute();
                             }
                         }).setNegativeButton(R.string.dialog_cancel, null)
@@ -303,11 +303,11 @@ public class AccountDetailsFragment extends Fragment implements
      * @author Pixmob
      */
     private static class DeleteAccountTask extends AsyncTask<Void, Void, Void> {
-        private final Context context;
+        private final Activity context;
         private final Account account;
         private final boolean dualPane;
         
-        public DeleteAccountTask(final Context context, final Account account,
+        public DeleteAccountTask(final Activity context, final Account account,
                 final boolean dualPane) {
             this.context = context;
             this.account = account;
@@ -332,8 +332,7 @@ public class AccountDetailsFragment extends Fragment implements
             if (dualPane) {
                 context.startService(new Intent(context, SyncService.class));
             } else {
-                context.startActivity(new Intent(context, FM2.class)
-                        .setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP));
+                context.finish();
             }
         }
     }
