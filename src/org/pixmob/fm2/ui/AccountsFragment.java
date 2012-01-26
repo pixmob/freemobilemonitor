@@ -96,29 +96,43 @@ public class AccountsFragment extends ListFragment implements
             Log.d(TAG, "AccountsFragment.onLoaderReset");
         }
         
-        // Clear the data in the adapter.
-        accountAdapter.setData(null);
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                // Clear the data in the adapter.
+                accountAdapter.setData(null);
+            }
+        });
     }
     
     @Override
-    public void onLoadFinished(Loader<List<Account>> loader, List<Account> data) {
+    public void onLoadFinished(Loader<List<Account>> loader,
+            final List<Account> data) {
         if (DEBUG) {
             Log.d(TAG, "AccountsFragment.onLoadFinished");
         }
         
-        // Set the new data in the adapter.
-        accountAdapter.setData(data);
-        
-        // The list should now be shown.
-        if (isResumed()) {
-            setListShown(true);
-        } else {
-            setListShownNoAnimation(true);
-        }
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                // The list should now be shown.
+                if (isResumed()) {
+                    setListShown(true);
+                } else {
+                    setListShownNoAnimation(true);
+                }
+                
+                // Set the new data in the adapter.
+                accountAdapter.setData(data);
+                
+                if (dualPane) {
+                    getListView().setItemChecked(selectedAccountIndex, false);
+                }
+            }
+        });
         
         if (dualPane) {
-            getListView().setItemChecked(selectedAccountIndex, false);
-            
+            // FIXME Remove this hack
             new Thread() {
                 @Override
                 public void run() {
