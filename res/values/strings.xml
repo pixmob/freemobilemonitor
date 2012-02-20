@@ -28,9 +28,9 @@
     <string name="adding_account">Création du compte…</string>
     <string name="account_deleted">Compte supprimé</string>
     <string name="pref_auto_update">Mise à jour automatique</string>
-    <string name="pref_update_interval">Intervalle de mise à jour</string><string name="auto_update_enabled">Service de mise à jour activé.</string>
+    <string name="pref_update_interval">Intervalle de mise à jour</string>
+    <string name="auto_update_enabled">Service de mise à jour activé.</string>
     <string name="auto_update_disabled">Service de mise à jour désactivé.</string>
-    
-    
+    <string name="show_password">Afficher le mot de passe</string>
 
 </resources>

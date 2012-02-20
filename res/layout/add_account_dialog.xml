@@ -32,6 +32,13 @@
             android:minEms="8"
             android:singleLine="true" >
         </EditText>
+
+        <CheckBox
+            android:id="@+id/show_password"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dip"
+            android:text="@string/show_password" />
     </LinearLayout>
 
 </LinearLayout>

@@ -47,12 +47,17 @@ import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.view.Menu;
 import android.support.v4.view.MenuItem;
+import android.text.method.PasswordTransformationMethod;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -478,10 +483,24 @@ public class AccountsFragment extends ListFragment implements
             final View content = inflater.inflate(R.layout.add_account_dialog,
                 null);
             
-            final TextView loginField = (TextView) content
+            final EditText loginField = (EditText) content
                     .findViewById(R.id.account_login);
-            final TextView passwordField = (TextView) content
+            final EditText passwordField = (EditText) content
                     .findViewById(R.id.account_password);
+            final CheckBox showPassword = (CheckBox) content
+                    .findViewById(R.id.show_password);
+            showPassword
+                    .setOnCheckedChangeListener(new OnCheckedChangeListener() {
+                        @Override
+                        public void onCheckedChanged(CompoundButton buttonView,
+                                boolean isChecked) {
+                            final int i = passwordField.getSelectionStart();
+                            passwordField
+                                    .setTransformationMethod(isChecked ? null
+                                            : new PasswordTransformationMethod());
+                            passwordField.setSelection(i);
+                        }
+                    });
             
             return new AlertDialog.Builder(getActivity())
                     .setTitle(R.string.menu_add_account)
