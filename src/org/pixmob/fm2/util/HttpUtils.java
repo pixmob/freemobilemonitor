@@ -17,32 +17,36 @@ package org.pixmob.fm2.util;
 
 import static org.pixmob.fm2.Constants.APPLICATION_NAME_USER_AGENT;
 import static org.pixmob.fm2.Constants.DEBUG;
-import static org.pixmob.fm2.Constants.SHARED_PREFS;
-import static org.pixmob.fm2.Constants.SP_KEY_DISABLE_CERTIFICATE_CHECK;
 import static org.pixmob.fm2.Constants.TAG;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.Socket;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
+import java.net.UnknownHostException;
+import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
 
-import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
+
+import org.apache.http.conn.ssl.StrictHostnameVerifier;
+import org.pixmob.fm2.R;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.Build;
 import android.util.Log;
@@ -52,6 +56,7 @@ import android.util.Log;
  * @author Pixmob
  */
 public final class HttpUtils {
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static String applicationVersion;
     
     static {
@@ -92,33 +97,18 @@ public final class HttpUtils {
         conn.setUseCaches(false);
         conn.setInstanceFollowRedirects(false);
         conn.setConnectTimeout(30000);
-        conn.setReadTimeout(90000);
+        conn.setReadTimeout(30000);
         conn.setRequestProperty("Accept-Encoding", "gzip");
         conn.setRequestProperty("User-Agent", getUserAgent(context));
         conn.setRequestProperty("Cache-Control", "max-age=0");
         conn.setDoInput(true);
         
-        // Disable connection pooling: some Android devices try to reuse closed
-        // connections, resulting in slow reads.
-        conn.setRequestProperty("Connection", "close");
-        
-        final SharedPreferences prefs = context.getSharedPreferences(
-            SHARED_PREFS, Context.MODE_PRIVATE);
-        final boolean disableCertificateCheck = prefs.getBoolean(
-            SP_KEY_DISABLE_CERTIFICATE_CHECK, false);
-        
-        if (disableCertificateCheck) {
-            if (conn instanceof HttpsURLConnection) {
-                if (DEBUG) {
-                    Log.d(TAG, "Disabling SSL certificate check "
-                            + "before connecting to " + uri);
-                }
-                disableCertificateCheck((HttpsURLConnection) conn);
-            }
+        if (conn instanceof HttpsURLConnection) {
+            setupSecureConnection(context, (HttpsURLConnection) conn);
         }
         
-        if (cookies != null) {
-            final StringBuilder buf = new StringBuilder(128);
+        if (cookies != null && !cookies.isEmpty()) {
+            final StringBuilder buf = new StringBuilder(256);
             for (final String cookie : cookies) {
                 if (buf.length() != 0) {
                     buf.append("; ");
@@ -196,55 +186,127 @@ public final class HttpUtils {
                 + Build.VERSION.RELEASE + "/" + Build.VERSION.SDK_INT + ")";
     }
     
-    /**
-     * Trust every server: do not check for any certificate. From:
-     * http://stackoverflow.com/a/1000205/422906.
-     */
-    private static void disableCertificateCheck(HttpsURLConnection conn) {
-        // Some Android devices (H**) has trouble with SSL:
-        // as a workaround, we trust every host names.
-        final HttpsURLConnection sConn = (HttpsURLConnection) conn;
-        sConn.setHostnameVerifier(AcceptAllHostnamesVerifier.INSTANCE);
-        
-        // Create a trust manager that does not validate certificate chains.
-        TrustManager[] trustAllCerts = new TrustManager[] { new X509TrustManager() {
-            @Override
-            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                return new java.security.cert.X509Certificate[] {};
-            }
-            
-            @Override
-            public void checkClientTrusted(X509Certificate[] chain,
-                    String authType) throws CertificateException {
-            }
-            
-            @Override
-            public void checkServerTrusted(X509Certificate[] chain,
-                    String authType) throws CertificateException {
-            }
-        } };
-        
-        // Install the all-trusting trust manager.
+    private static KeyStore loadCertificates(Context context)
+            throws IOException {
         try {
-            SSLContext sc = SSLContext.getInstance("TLS");
-            sc.init(null, trustAllCerts, new java.security.SecureRandom());
-            conn.setSSLSocketFactory(sc.getSocketFactory());
+            final KeyStore localTrustStore = KeyStore.getInstance("BKS");
+            final InputStream in = context.getResources().openRawResource(
+                R.raw.mykeystore);
+            try {
+                localTrustStore.load(in, "mysecret".toCharArray());
+            } finally {
+                in.close();
+            }
+            
+            return localTrustStore;
         } catch (Exception e) {
-            Log.w(TAG, "SSL engine setup error", e);
+            throw new IOException("Failed to load SSL certificates", e);
         }
     }
     
     /**
-     * {@link HostnameVerifier} accepting every host names.
-     * @author Pixmob
+     * Setup SSL connection.
      */
-    private final static class AcceptAllHostnamesVerifier implements
-            HostnameVerifier {
-        public static final HostnameVerifier INSTANCE = new AcceptAllHostnamesVerifier();
-        
-        @Override
-        public boolean verify(String hostname, SSLSession session) {
-            return true;
+    private static void setupSecureConnection(Context context,
+            HttpsURLConnection conn) throws IOException {
+        if (DEBUG) {
+            Log.d(TAG, "Load custom SSL certificates");
         }
+        
+        final SSLContext sslContext;
+        try {
+            // Load SSL certificates:
+            // http://nelenkov.blogspot.com/2011/12/using-custom-certificate-trust-store-on.html
+            // Earlier Android versions do not have updated root CA
+            // certificates, resulting in connection errors.
+            final KeyStore keyStore = loadCertificates(context);
+            final KeyManagerFactory km = KeyManagerFactory
+                    .getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            km.init(keyStore, "mysecret".toCharArray());
+            final TrustManagerFactory tmf;
+            tmf = TrustManagerFactory.getInstance(TrustManagerFactory
+                    .getDefaultAlgorithm());
+            tmf.init(keyStore);
+            
+            // Init SSL connection with custom certificates.
+            // The same SecureRandom instance is used for every connection to
+            // speed up initialization.
+            sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(km.getKeyManagers(), tmf.getTrustManagers(),
+                SECURE_RANDOM);
+        } catch (GeneralSecurityException e) {
+            throw new IOException("Failed to initialize SSL engine", e);
+        }
+        
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
+            // Fix slow read:
+            // http://code.google.com/p/android/issues/detail?id=13117
+            // Prior to ICS, the host name is still resolved even if we already
+            // know its IP address, for each connection.
+            final SSLSocketFactory delegate = sslContext.getSocketFactory();
+            final SSLSocketFactory socketFactory = new SSLSocketFactory() {
+                @Override
+                public Socket createSocket(String host, int port)
+                        throws IOException, UnknownHostException {
+                    InetAddress addr = InetAddress.getByName(host);
+                    injectHostname(addr, host);
+                    return delegate.createSocket(addr, port);
+                }
+                
+                @Override
+                public Socket createSocket(InetAddress host, int port)
+                        throws IOException {
+                    return delegate.createSocket(host, port);
+                }
+                
+                @Override
+                public Socket createSocket(String host, int port,
+                        InetAddress localHost, int localPort)
+                        throws IOException, UnknownHostException {
+                    return delegate.createSocket(host, port, localHost,
+                        localPort);
+                }
+                
+                @Override
+                public Socket createSocket(InetAddress address, int port,
+                        InetAddress localAddress, int localPort)
+                        throws IOException {
+                    return delegate.createSocket(address, port, localAddress,
+                        localPort);
+                }
+                
+                private void injectHostname(InetAddress address, String host) {
+                    try {
+                        Field field = InetAddress.class
+                                .getDeclaredField("hostName");
+                        field.setAccessible(true);
+                        field.set(address, host);
+                    } catch (Exception ignored) {
+                    }
+                }
+                
+                @Override
+                public Socket createSocket(Socket s, String host, int port,
+                        boolean autoClose) throws IOException {
+                    injectHostname(s.getInetAddress(), host);
+                    return delegate.createSocket(s, host, port, autoClose);
+                }
+                
+                @Override
+                public String[] getDefaultCipherSuites() {
+                    return delegate.getDefaultCipherSuites();
+                }
+                
+                @Override
+                public String[] getSupportedCipherSuites() {
+                    return delegate.getSupportedCipherSuites();
+                }
+            };
+            conn.setSSLSocketFactory(socketFactory);
+        } else {
+            conn.setSSLSocketFactory(sslContext.getSocketFactory());
+        }
+        
+        conn.setHostnameVerifier(new StrictHostnameVerifier());
     }
 }

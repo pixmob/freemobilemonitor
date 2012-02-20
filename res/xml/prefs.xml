@@ -14,6 +14,5 @@
         android:entryValues="@array/update_interval_values"
         android:key="updateInterval"
         android:title="@string/pref_update_interval" android:defaultValue="900000"/>
-    <CheckBoxPreference android:title="@string/pref_disable_certificate_check" android:key="disableCertificateCheck" android:defaultValue="false" android:summary="@string/pref_disable_certificate_check_help"/>
 
 </PreferenceScreen>
