@@ -55,9 +55,11 @@ public final class HttpUtils {
     private static String applicationVersion;
     
     static {
-        // Disable connection pooling:
-        // http://stackoverflow.com/a/4261005/422906
-        System.setProperty("http.keepAlive", "false");
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.FROYO) {
+            // Disable connection pooling before Froyo:
+            // http://stackoverflow.com/a/4261005/422906
+            System.setProperty("http.keepAlive", "false");
+        }
     }
     
     private HttpUtils() {
