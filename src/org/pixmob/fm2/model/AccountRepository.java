@@ -187,7 +187,7 @@ public class AccountRepository {
      */
     private static class DbHelper extends SQLiteOpenHelper {
         public DbHelper(final Context context) {
-            super(context, "accounts.db", null, 1);
+            super(context, "accounts.db", null, 2);
         }
         
         @Override
@@ -203,7 +203,11 @@ public class AccountRepository {
         
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-            db.delete(ACCOUNTS_TABLE, null, null);
+            // Clean up database. Earlier versions of this application did not
+            // check user input when creating an account. It was possible to
+            // create an account with an empty login (or the weird value 255).
+            db.execSQL("DELETE FROM " + ACCOUNTS_TABLE
+                    + " WHERE login=? OR login=?", new Object[] { "", "255" });
         }
     }
 }
