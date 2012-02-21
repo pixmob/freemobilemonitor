@@ -247,6 +247,11 @@ public class SyncService extends ActionService {
                 if (trackUpdates && account.status != accountStatusBeforeUpdate) {
                     accountsUpdated = true;
                 }
+            } catch (UnknownHostException e) {
+                // Network became unavailable.
+                Log.w(TAG, "Skip user account synchronization "
+                        + "since network is not available", e);
+                return;
             } catch (IOException e) {
                 Log.w(TAG, "Account update failed for user " + account.login, e);
                 BugSenseHandler.log(TAG, e);
