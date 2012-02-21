@@ -56,6 +56,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import com.bugsense.trace.BugSenseHandler;
+
 /**
  * {@link Fragment} for displaying account details.
  * @author Pixmob
@@ -245,6 +247,7 @@ public class AccountDetailsFragment extends Fragment implements
                 } catch (IOException e) {
                     Log.e(TAG, "Cannot load authentication cookies for user "
                             + account.login, e);
+                    BugSenseHandler.log(TAG, e);
                 }
             }
             return Collections.emptySet();

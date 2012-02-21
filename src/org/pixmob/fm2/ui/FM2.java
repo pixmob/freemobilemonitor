@@ -22,6 +22,8 @@ import android.os.Bundle;
 import android.support.v4.app.ActionBar;
 import android.support.v4.app.FragmentActivity;
 
+import com.bugsense.trace.BugSenseHandler;
+
 /**
  * Application entry point.
  * @author Pixmob
@@ -38,6 +40,9 @@ public class FM2 extends FragmentActivity {
         actionBar.setDisplayShowTitleEnabled(false);
         
         setContentView(R.layout.main);
+        
+        // Setup the Bugsense framework for reporting errors in the application.
+        BugSenseHandler.setup(this, "fc5f1331");
     }
     
     @Override

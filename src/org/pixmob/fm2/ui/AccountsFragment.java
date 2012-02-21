@@ -63,6 +63,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bugsense.trace.BugSenseHandler;
+
 /**
  * {@link Fragment} displaying {@link Account} instances.
  * @author Pixmob
@@ -441,6 +443,7 @@ public class AccountsFragment extends ListFragment implements
                 Collections.sort(newAccounts, AccountComparator.INSTANCE);
             } catch (Exception e) {
                 Log.e(TAG, "Account loading failed", e);
+                BugSenseHandler.log(TAG, e);
             }
             
             accounts = newAccounts;

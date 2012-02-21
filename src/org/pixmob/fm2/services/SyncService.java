@@ -42,6 +42,8 @@ import android.os.IBinder;
 import android.os.Message;
 import android.util.Log;
 
+import com.bugsense.trace.BugSenseHandler;
+
 /**
  * Service for synchronizing accounts.
  * @author Pixmob
@@ -177,6 +179,7 @@ public class SyncService extends ActionService {
     @Override
     protected void onActionError(Intent intent, Exception error) {
         Log.wtf(TAG, "Background account synchronization failed", error);
+        BugSenseHandler.log(TAG, error);
     }
     
     @Override
@@ -240,6 +243,7 @@ public class SyncService extends ActionService {
                 }
             } catch (IOException e) {
                 Log.w(TAG, "Account update failed for user " + account.login, e);
+                BugSenseHandler.log(TAG, e);
                 tryLater = true;
             }
         }
