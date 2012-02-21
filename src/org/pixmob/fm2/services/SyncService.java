@@ -19,6 +19,7 @@ import static org.pixmob.fm2.Constants.TAG;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.List;
 
@@ -254,7 +255,11 @@ public class SyncService extends ActionService {
                 return;
             } catch (IOException e) {
                 Log.w(TAG, "Account update failed for user " + account.login, e);
-                BugSenseHandler.log(TAG, e);
+                
+                if (!(e instanceof SocketTimeoutException)) {
+                    BugSenseHandler.log(TAG, e);
+                }
+                
                 tryLater = true;
             }
         }
