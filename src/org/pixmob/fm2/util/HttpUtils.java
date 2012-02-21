@@ -141,15 +141,18 @@ public final class HttpUtils {
             }
         }
         
+        final byte[] payload = query.toString().getBytes(charset);
+        
         final HttpURLConnection conn = newRequest(context, uri, null);
         conn.setDoOutput(true);
+        conn.setFixedLengthStreamingMode(payload.length);
         conn.setRequestProperty("Accept-Charset", charset);
         conn.setRequestProperty("Content-Type",
             "application/x-www-form-urlencoded;charset=" + charset);
         
         final OutputStream queryOutput = conn.getOutputStream();
         try {
-            queryOutput.write(query.toString().getBytes(charset));
+            queryOutput.write(payload);
         } finally {
             IOUtils.close(queryOutput);
         }
