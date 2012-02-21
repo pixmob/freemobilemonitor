@@ -16,13 +16,12 @@
 package org.pixmob.fm2.ui;
 
 import org.pixmob.fm2.R;
+import org.pixmob.fm2.util.BugSenseUtils;
 
 import android.app.NotificationManager;
 import android.os.Bundle;
 import android.support.v4.app.ActionBar;
 import android.support.v4.app.FragmentActivity;
-
-import com.bugsense.trace.BugSenseHandler;
 
 /**
  * Application entry point.
@@ -41,8 +40,8 @@ public class FM2 extends FragmentActivity {
         
         setContentView(R.layout.main);
         
-        // Setup the Bugsense framework for reporting errors in the application.
-        BugSenseHandler.setup(this, "fc5f1331");
+        // Setup BugSense framework.
+        BugSenseUtils.setup(this);
     }
     
     @Override

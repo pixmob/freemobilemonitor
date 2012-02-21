@@ -3,4 +3,5 @@ bin
 gen
 .settings
 *.log
+assets/bugsense.txt
 
