@@ -165,9 +165,11 @@ public final class HttpUtils {
             throws IOException {
         final List<String> contentEncodingValues = conn.getHeaderFields().get(
             "Content-Encoding");
-        for (final String contentEncoding : contentEncodingValues) {
-            if ("gzip".contains(contentEncoding)) {
-                return new GZIPInputStream(conn.getInputStream());
+        if (contentEncodingValues != null) {
+            for (final String contentEncoding : contentEncodingValues) {
+                if (contentEncoding != null && contentEncoding.contains("gzip")) {
+                    return new GZIPInputStream(conn.getInputStream());
+                }
             }
         }
         return conn.getInputStream();
