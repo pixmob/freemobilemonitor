@@ -96,7 +96,7 @@ public final class HttpUtils {
         conn.setUseCaches(false);
         conn.setInstanceFollowRedirects(false);
         conn.setConnectTimeout(30000);
-        conn.setReadTimeout(30000);
+        conn.setReadTimeout(60000);
         conn.setRequestProperty("Accept-Encoding", "gzip");
         conn.setRequestProperty("User-Agent", getUserAgent(context));
         conn.setRequestProperty("Cache-Control", "max-age=0");
