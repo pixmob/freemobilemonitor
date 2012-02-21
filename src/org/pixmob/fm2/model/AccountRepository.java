@@ -61,7 +61,6 @@ public class AccountRepository {
         final SQLiteDatabase db = dbHelper.getReadableDatabase();
         try {
             READ_LOCK.lock();
-            db.beginTransaction();
             Cursor c = null;
             try {
                 c = db.query(ACCOUNTS_TABLE, new String[] { "id", "name",
@@ -79,12 +78,10 @@ public class AccountRepository {
                     account.timestamp = c.getLong(6);
                     accounts.add(account);
                 }
-                db.setTransactionSuccessful();
             } finally {
                 if (c != null) {
                     c.close();
                 }
-                db.endTransaction();
             }
         } finally {
             db.close();
