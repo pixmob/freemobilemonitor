@@ -52,15 +52,22 @@ public class AccountRepository {
         dbHelper = new DbHelper(context);
     }
     
+    private static void close(SQLiteDatabase db) {
+        if (db != null) {
+            db.close();
+        }
+    }
+    
     /**
      * Get account list.
      */
     public List<Account> list() {
         final List<Account> accounts = new ArrayList<Account>(4);
         
-        final SQLiteDatabase db = dbHelper.getReadableDatabase();
+        SQLiteDatabase db = null;
         try {
             READ_LOCK.lock();
+            db = dbHelper.getReadableDatabase();
             Cursor c = null;
             try {
                 c = db.query(ACCOUNTS_TABLE, new String[] { "id", "name",
@@ -84,7 +91,7 @@ public class AccountRepository {
                 }
             }
         } finally {
-            db.close();
+            close(db);
             READ_LOCK.unlock();
         }
         
@@ -106,9 +113,10 @@ public class AccountRepository {
         cv.put("login", login);
         cv.put("password", password);
         
-        final SQLiteDatabase db = dbHelper.getWritableDatabase();
+        SQLiteDatabase db = null;
         try {
             WRITE_LOCK.lock();
+            db = dbHelper.getWritableDatabase();
             db.beginTransaction();
             try {
                 db.insertOrThrow(ACCOUNTS_TABLE, "id", cv);
@@ -117,7 +125,7 @@ public class AccountRepository {
                 db.endTransaction();
             }
         } finally {
-            db.close();
+            close(db);
             WRITE_LOCK.unlock();
         }
     }
@@ -130,9 +138,10 @@ public class AccountRepository {
             Log.d(TAG, "Deleting account: " + account.login);
         }
         
-        final SQLiteDatabase db = dbHelper.getWritableDatabase();
+        SQLiteDatabase db = null;
         try {
             WRITE_LOCK.lock();
+            db = dbHelper.getWritableDatabase();
             db.beginTransaction();
             try {
                 db.delete(ACCOUNTS_TABLE, "id=?",
@@ -142,7 +151,7 @@ public class AccountRepository {
                 db.endTransaction();
             }
         } finally {
-            db.close();
+            close(db);
             WRITE_LOCK.unlock();
         }
     }
@@ -161,9 +170,10 @@ public class AccountRepository {
         cv.put("status", account.status);
         cv.put("timestamp", account.timestamp);
         
-        final SQLiteDatabase db = dbHelper.getWritableDatabase();
+        SQLiteDatabase db = null;
         try {
             WRITE_LOCK.lock();
+            db = dbHelper.getWritableDatabase();
             db.beginTransaction();
             try {
                 db.update(ACCOUNTS_TABLE, cv, "id=?",
@@ -173,7 +183,7 @@ public class AccountRepository {
                 db.endTransaction();
             }
         } finally {
-            db.close();
+            close(db);
             WRITE_LOCK.unlock();
         }
     }
