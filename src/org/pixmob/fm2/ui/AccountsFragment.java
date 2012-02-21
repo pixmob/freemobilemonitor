@@ -43,6 +43,7 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.ListFragment;
 import android.support.v4.app.LoaderManager.LoaderCallbacks;
+import android.support.v4.app.SupportActivity;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
 import android.support.v4.view.Menu;
@@ -515,8 +516,8 @@ public class AccountsFragment extends ListFragment implements
                                         .toString().trim();
                                 final String password = passwordField.getText()
                                         .toString().trim();
-                                new CreateAccountTask(getActivity()
-                                        .getApplicationContext(), login,
+                                new CreateAccountTask(
+                                        (SupportActivity) getActivity(), login,
                                         password).execute();
                             }
                         }).setNegativeButton(R.string.dialog_cancel, null)
@@ -525,31 +526,53 @@ public class AccountsFragment extends ListFragment implements
     }
     
     private static class CreateAccountTask extends AsyncTask<Void, Void, Void> {
-        private final Context context;
+        private final SupportActivity context;
         private final String login;
         private final String password;
+        private boolean missingData;
         
-        public CreateAccountTask(final Context context, final String login,
-                final String password) {
+        public CreateAccountTask(final SupportActivity context,
+                final String login, final String password) {
             this.context = context;
-            this.login = login;
-            this.password = password;
+            this.login = login.trim();
+            this.password = password.trim();
         }
         
         @Override
         protected Void doInBackground(Void... params) {
-            final AccountRepository accountRepository = new AccountRepository(
-                    context);
-            accountRepository.create(login, password);
+            if (login.length() == 0 || password.length() == 0) {
+                missingData = true;
+            } else {
+                final AccountRepository accountRepository = new AccountRepository(
+                        context.getApplicationContext());
+                accountRepository.create(login, password);
+            }
             return null;
         }
         
         @Override
         protected void onPostExecute(Void result) {
             super.onPostExecute(result);
-            Toast.makeText(context, context.getString(R.string.adding_account),
-                Toast.LENGTH_SHORT).show();
-            context.startService(new Intent(context, SyncService.class));
+            if (missingData) {
+                new MissingAccountDataDialog().show(
+                    context.getSupportFragmentManager(), "error");
+            } else {
+                Toast.makeText(context.getApplicationContext(),
+                    context.getString(R.string.adding_account),
+                    Toast.LENGTH_SHORT).show();
+                context.startService(new Intent(
+                        context.getApplicationContext(), SyncService.class));
+            }
+        }
+    }
+    
+    public static class MissingAccountDataDialog extends DialogFragment {
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            return new AlertDialog.Builder(getActivity())
+                    .setTitle(R.string.dialog_error)
+                    .setMessage(R.string.missing_data_for_adding_account)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .setIcon(android.R.drawable.ic_dialog_alert).create();
         }
     }
 }
