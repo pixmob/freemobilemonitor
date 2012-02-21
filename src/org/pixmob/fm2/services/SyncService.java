@@ -19,6 +19,7 @@ import static org.pixmob.fm2.Constants.TAG;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.net.UnknownHostException;
 import java.util.List;
 
 import org.pixmob.actionservice.ActionExecutionFailedException;
@@ -178,16 +179,21 @@ public class SyncService extends ActionService {
     
     @Override
     protected void onActionError(Intent intent, Exception error) {
-        Log.wtf(TAG, "Background account synchronization failed", error);
-        BugSenseHandler.log(TAG, error);
+        if (error instanceof UnknownHostException) {
+            Log.w(TAG, "Skip user account synchronization "
+                    + "since network is not available", error);
+        } else {
+            Log.wtf(TAG, "Background account synchronization failed", error);
+            BugSenseHandler.log(TAG, error);
+        }
     }
     
     @Override
     protected void onHandleAction(Intent intent)
             throws ActionExecutionFailedException, InterruptedException {
         if (!isNetworkConnected()) {
-            Log.w(TAG,
-                "Skip user account synchronization since network is not available");
+            Log.w(TAG, "Skip user account synchronization "
+                    + "since network is not available");
             return;
         }
         
