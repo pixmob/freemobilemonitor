@@ -20,6 +20,7 @@ import static org.pixmob.fm2.Constants.TAG;
 
 import org.pixmob.fm2.features.Features;
 import org.pixmob.fm2.features.StrictModeFeature;
+import org.pixmob.fm2.services.DatabaseCleanupService;
 import org.pixmob.fm2.services.SchedulerService;
 
 import android.content.Intent;
@@ -39,6 +40,9 @@ public class Application extends android.app.Application {
             Log.i(TAG, "Enabling StrictMode settings");
             Features.getFeature(StrictModeFeature.class).enable();
         }
+        
+        // Cleanup database.
+        startService(new Intent(this, DatabaseCleanupService.class));
         
         // Make sure background scheduling is set.
         startService(new Intent(this, SchedulerService.class));

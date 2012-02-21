@@ -46,6 +46,8 @@
             android:name=".services.SchedulerService"
             android:label="@string/service_scheduler" >
         </service>
+        <service android:name=".services.DatabaseCleanupService" >
+        </service>
 
         <receiver android:name=".receivers.BootReceiver" >
             <intent-filter>
