@@ -38,12 +38,11 @@ import java.util.Set;
 import java.util.zip.GZIPInputStream;
 
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.TrustManager;
 
-import org.apache.http.conn.ssl.StrictHostnameVerifier;
+import org.apache.http.conn.ssl.BrowserCompatHostnameVerifier;
 import org.pixmob.fm2.R;
 
 import android.content.Context;
@@ -229,20 +228,16 @@ public final class HttpUtils {
             // Earlier Android versions do not have updated root CA
             // certificates, resulting in connection errors.
             final KeyStore keyStore = loadCertificates(context);
-            final KeyManagerFactory km = KeyManagerFactory
-                    .getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            km.init(keyStore, "mysecret".toCharArray());
-            final TrustManagerFactory tmf;
-            tmf = TrustManagerFactory.getInstance(TrustManagerFactory
-                    .getDefaultAlgorithm());
-            tmf.init(keyStore);
+            
+            final CustomTrustManager customTrustManager = new CustomTrustManager(
+                    keyStore);
+            final TrustManager[] tms = new TrustManager[] { customTrustManager };
             
             // Init SSL connection with custom certificates.
             // The same SecureRandom instance is used for every connection to
             // speed up initialization.
             sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(km.getKeyManagers(), tmf.getTrustManagers(),
-                SECURE_RANDOM);
+            sslContext.init(null, tms, SECURE_RANDOM);
         } catch (GeneralSecurityException e) {
             throw new IOException("Failed to initialize SSL engine", e);
         }
@@ -316,6 +311,6 @@ public final class HttpUtils {
             conn.setSSLSocketFactory(sslContext.getSocketFactory());
         }
         
-        conn.setHostnameVerifier(new StrictHostnameVerifier());
+        conn.setHostnameVerifier(new BrowserCompatHostnameVerifier());
     }
 }
