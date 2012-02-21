@@ -103,6 +103,10 @@ public final class HttpUtils {
         conn.setRequestProperty("Cache-Control", "max-age=0");
         conn.setDoInput(true);
         
+        // Close the connection when the request is done, or the application may
+        // freeze due to a bug in some Android versions.
+        conn.setRequestProperty("Connection", "close");
+        
         if (conn instanceof HttpsURLConnection) {
             setupSecureConnection(context, (HttpsURLConnection) conn);
         }
