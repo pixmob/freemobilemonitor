@@ -53,6 +53,11 @@ public class AccountNetworkClient {
      * Connect to the Free Mobile website and get account updates.
      */
     public void update(Account account) throws IOException {
+        // FIXME Remove this when the nasty bug about "weird" accounts is fixed.
+        if ("255".equals(account.login)) {
+            throw new IOException("Invalid user");
+        }
+        
         final Set<String> cookies = new HashSet<String>(4);
         if (!authenticate(account, cookies)) {
             throw new IOException("Authentication failed for user "
