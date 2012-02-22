@@ -18,6 +18,8 @@ package org.pixmob.fm2.ui;
 import static org.pixmob.fm2.Constants.TAG;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -247,7 +249,12 @@ public class AccountDetailsFragment extends Fragment implements
                 } catch (IOException e) {
                     Log.e(TAG, "Cannot load authentication cookies for user "
                             + account.login, e);
-                    BugSenseHandler.log(TAG, e);
+                    
+                    if (!(e instanceof UnknownHostException)
+                            && !(e instanceof SocketTimeoutException)) {
+                        // Only report useful errors.
+                        BugSenseHandler.log(TAG, e);
+                    }
                 }
             }
             return Collections.emptySet();

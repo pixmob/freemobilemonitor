@@ -23,6 +23,8 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.List;
 
+import javax.net.ssl.SSLException;
+
 import org.pixmob.actionservice.ActionExecutionFailedException;
 import org.pixmob.actionservice.ActionService;
 import org.pixmob.fm2.R;
@@ -180,13 +182,8 @@ public class SyncService extends ActionService {
     
     @Override
     protected void onActionError(Intent intent, Exception error) {
-        if (error instanceof UnknownHostException) {
-            Log.w(TAG, "Skip user account synchronization "
-                    + "since network is not available", error);
-        } else {
-            Log.wtf(TAG, "Background account synchronization failed", error);
-            BugSenseHandler.log(TAG, error);
-        }
+        Log.wtf(TAG, "Background account synchronization failed", error);
+        BugSenseHandler.log(TAG, error);
     }
     
     @Override
@@ -214,10 +211,22 @@ public class SyncService extends ActionService {
         
         try {
             doSync(trackUpdates, retryCount);
+        } catch (UnknownHostException e) {
+            Log.w(TAG, "Skip user account synchronization "
+                    + "since network is not available", e);
+        } catch (SocketTimeoutException e) {
+            Log.w(TAG, "Skip user account synchronization ("
+                    + "connection timeout)", e);
         } catch (IOException e) {
-            fireOnSyncError(e);
-            throw new ActionExecutionFailedException("Synchronization failed",
-                    e);
+            if (e instanceof SSLException
+                    && e.getMessage().contains("Connection timed out")) {
+                Log.w(TAG, "Skip user account synchronization ("
+                        + "connection timeout)", e);
+            } else {
+                fireOnSyncError(e);
+                throw new ActionExecutionFailedException(
+                        "Synchronization failed", e);
+            }
         } finally {
             stopForeground(true);
             
