@@ -180,7 +180,9 @@ public class AccountNetworkClient {
         } catch (IOException e) {
             throw e;
         } catch (Exception e) {
-            throw new IOException("Login encoding failed", e);
+            final IOException ioe = new IOException("Login encoding failed");
+            ioe.initCause(e);
+            throw ioe;
         } finally {
             outputFile.delete();
         }
@@ -292,7 +294,10 @@ public class AccountNetworkClient {
         } catch (IOException e) {
             throw e;
         } catch (Exception e) {
-            throw new IOException("User status parsing failed", e);
+            final IOException ioe = new IOException(
+                    "User status parsing failed");
+            ioe.initCause(e);
+            throw ioe;
         }
     }
 }

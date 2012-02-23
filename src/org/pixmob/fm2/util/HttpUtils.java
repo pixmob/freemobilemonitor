@@ -210,7 +210,10 @@ public final class HttpUtils {
             
             return localTrustStore;
         } catch (Exception e) {
-            throw new IOException("Failed to load SSL certificates", e);
+            final IOException ioe = new IOException(
+                    "Failed to load SSL certificates");
+            ioe.initCause(e);
+            throw ioe;
         }
     }
     
@@ -241,7 +244,10 @@ public final class HttpUtils {
             sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, tms, SECURE_RANDOM);
         } catch (GeneralSecurityException e) {
-            throw new IOException("Failed to initialize SSL engine", e);
+            final IOException ioe = new IOException(
+                    "Failed to initialize SSL engine");
+            ioe.initCause(e);
+            throw ioe;
         }
         
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
