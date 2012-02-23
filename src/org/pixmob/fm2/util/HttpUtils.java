@@ -92,6 +92,12 @@ public final class HttpUtils {
         try {
             conn.connect();
             
+            final int sc = conn.getResponseCode();
+            if (sc != HttpURLConnection.HTTP_OK) {
+                throw new IOException("Cannot download file: " + uri
+                        + "; statusCode=" + sc);
+            }
+            
             final InputStream input = getInputStream(conn);
             IOUtils.writeToFile(input, outputFile);
         } finally {
