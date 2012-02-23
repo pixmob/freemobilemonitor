@@ -128,7 +128,8 @@ public final class HttpUtils {
      * Prepare a <code>POST</code> Http request.
      */
     public static HttpURLConnection newPostRequest(Context context, String uri,
-            Map<String, String> params, String charset) throws IOException {
+            Set<String> cookies, Map<String, String> params, String charset)
+            throws IOException {
         final StringBuilder query = new StringBuilder();
         if (params != null) {
             for (final Map.Entry<String, String> e : params.entrySet()) {
@@ -142,12 +143,13 @@ public final class HttpUtils {
         
         final byte[] payload = query.toString().getBytes(charset);
         
-        final HttpURLConnection conn = newRequest(context, uri, null);
+        final HttpURLConnection conn = newRequest(context, uri, cookies);
         conn.setDoOutput(true);
         conn.setFixedLengthStreamingMode(payload.length);
         conn.setRequestProperty("Accept-Charset", charset);
         conn.setRequestProperty("Content-Type",
             "application/x-www-form-urlencoded;charset=" + charset);
+        conn.setRequestProperty("Referer", uri);
         
         final OutputStream queryOutput = conn.getOutputStream();
         try {

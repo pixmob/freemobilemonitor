@@ -82,15 +82,19 @@ public class AccountNetworkClient {
      */
     public boolean authenticate(Account account, Set<String> cookies)
             throws IOException {
+        final String encodedLogin = encodeLogin(account, cookies);
+        
         final Map<String, String> params = new HashMap<String, String>(2);
-        params.put("login_abo", account.login);
+        params.put("login_abo", encodedLogin);
         params.put("pwd_abo", account.password);
         
         Log.i(TAG, "Authenticating user " + account.login);
         
-        final HttpURLConnection conn = HttpUtils.newPostRequest(context,
-            "https://mobile.free.fr/moncompte/index.php?page=commande", params,
-            CHARSET);
+        final HttpURLConnection conn = HttpUtils
+                .newPostRequest(
+                    context,
+                    "https://mobile.free.fr/moncompte/index.php?page=commande&produit=sim",
+                    cookies, params, CHARSET);
         try {
             conn.connect();
             final int sc = conn.getResponseCode();
@@ -111,13 +115,85 @@ public class AccountNetworkClient {
         return true;
     }
     
+    private String encodeLogin(Account account, Set<String> cookies)
+            throws IOException {
+        Log.i(TAG, "Encoding login for user " + account.login);
+        
+        final File outputFile;
+        final HttpURLConnection conn = HttpUtils.newRequest(context,
+            "https://mobile.free.fr/moncompte/index.php", cookies);
+        try {
+            conn.connect();
+            final int sc = conn.getResponseCode();
+            if (DEBUG) {
+                Log.d(TAG, "Got response: " + sc);
+            }
+            if (sc != HttpURLConnection.HTTP_OK) {
+                throw new IOException("Login encoding failed");
+            }
+            
+            HttpUtils.readCookies(conn, cookies);
+            
+            final File outputDir = context.getCacheDir();
+            outputFile = new File(outputDir, "account_login_" + account.login
+                    + ".html");
+            IOUtils.writeToFile(HttpUtils.getInputStream(conn), outputFile);
+            
+            if (DEBUG) {
+                Log.d(TAG,
+                    "Output written to file: " + outputFile.getAbsolutePath());
+            }
+        } finally {
+            conn.disconnect();
+        }
+        
+        try {
+            final Document doc = Jsoup.parse(outputFile, null);
+            final Elements imgNodes = doc.getElementById("ident_chiffre")
+                    .getElementsByTag("img");
+            final int imgNodesLen = imgNodes.size();
+            
+            final Map<String, String> convert = new HashMap<String, String>(10);
+            for (int i = 0; i < imgNodesLen; ++i) {
+                final Element elem = imgNodes.get(i);
+                final String text = elem.attr("onclick");
+                final int comaPos = text.indexOf(',');
+                final String digit = text.substring(comaPos - 1, comaPos);
+                final String pos = text.substring(comaPos + 2, comaPos + 3);
+                convert.put(digit, pos);
+            }
+            
+            final StringBuilder encodedLogin = new StringBuilder(10);
+            final int loginLen = account.login.length();
+            for (int i = 0; i < loginLen; ++i) {
+                final String key = String.valueOf(account.login.charAt(i));
+                final String encoded = convert.get(key);
+                encodedLogin.append(encoded);
+            }
+            
+            if (DEBUG) {
+                Log.d(TAG, "Login encoded: " + account.login + " => "
+                        + encodedLogin + "; map=" + convert);
+            }
+            
+            return encodedLogin.toString();
+        } catch (IOException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IOException("Login encoding failed", e);
+        } finally {
+            outputFile.delete();
+        }
+    }
+    
     private File fetchAccountData(String userLogin, Set<String> cookies)
             throws IOException {
         Log.i(TAG, "Fetching status for user " + userLogin);
         
         final HttpURLConnection conn = HttpUtils
-                .newRequest(context,
-                    "https://mobile.free.fr/moncompte/index.php?page=commande",
+                .newRequest(
+                    context,
+                    "https://mobile.free.fr/moncompte/index.php?page=commande&produit=sim",
                     cookies);
         try {
             conn.connect();

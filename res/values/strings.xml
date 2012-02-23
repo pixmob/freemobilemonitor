@@ -34,7 +34,5 @@
     <string name="show_password">Afficher le mot de passe</string>
     <string name="missing_data_for_adding_account">La création du compte requiert un identifiant et un mot de passe.</string>
     <string name="dialog_error">Désolé!</string>
-    <string name="dialog_end_of_game">That\'s all folks!</string>
-    <string name="end_of_game">Le site mobile.free.fr empêche désormais l\'utilisation d\'applications tiers.\nMerci d\'avoir utilisé cette application. A bientôt, pour d\'autres aventures ;)</string>
 
 </resources>

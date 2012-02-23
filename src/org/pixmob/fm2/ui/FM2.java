@@ -18,8 +18,6 @@ package org.pixmob.fm2.ui;
 import org.pixmob.fm2.R;
 import org.pixmob.fm2.util.BugSenseUtils;
 
-import android.app.AlertDialog;
-import android.app.Dialog;
 import android.app.NotificationManager;
 import android.os.Bundle;
 import android.support.v4.app.ActionBar;
@@ -44,8 +42,6 @@ public class FM2 extends FragmentActivity {
         
         // Setup BugSense framework.
         BugSenseUtils.setup(this);
-        
-        showDialog(0);
     }
     
     @Override
@@ -55,14 +51,5 @@ public class FM2 extends FragmentActivity {
         // Clear the notification about account updates.
         final NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         nm.cancel(R.string.notif_account_updated);
-    }
-    
-    @Override
-    protected Dialog onCreateDialog(int id) {
-        return new AlertDialog.Builder(this)
-                .setTitle(R.string.dialog_end_of_game)
-                .setMessage(R.string.end_of_game)
-                .setIcon(android.R.drawable.ic_dialog_alert)
-                .setPositiveButton(android.R.string.ok, null).create();
     }
 }
