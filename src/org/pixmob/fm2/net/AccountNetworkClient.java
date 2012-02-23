@@ -54,8 +54,9 @@ public class AccountNetworkClient {
      */
     public void update(Account account) throws IOException {
         // FIXME Remove this when the nasty bug about "weird" accounts is fixed.
-        if ("255".equals(account.login)) {
-            throw new IOException("Invalid user");
+        if (account.login.length() < 8) {
+            throw new IOException("Invalid user: " + account.login + " ["
+                    + account.id + "]");
         }
         
         final Set<String> cookies = new HashSet<String>(4);
