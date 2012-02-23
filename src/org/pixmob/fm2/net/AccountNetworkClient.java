@@ -19,12 +19,15 @@ import static org.pixmob.fm2.Constants.DEBUG;
 import static org.pixmob.fm2.Constants.TAG;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.zip.CRC32;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -43,6 +46,21 @@ import android.util.Log;
  */
 public class AccountNetworkClient {
     private static final String CHARSET = "UTF-8";
+    private static final long[] DIGIT_CRCS = new long[10];
+    
+    static {
+        DIGIT_CRCS[0] = 3376728150L;
+        DIGIT_CRCS[1] = 3751550807L;
+        DIGIT_CRCS[2] = 478599653L;
+        DIGIT_CRCS[3] = 3783288966L;
+        DIGIT_CRCS[4] = 1283656032L;
+        DIGIT_CRCS[5] = 2508031604L;
+        DIGIT_CRCS[6] = 804711360L;
+        DIGIT_CRCS[7] = 40629710L;
+        DIGIT_CRCS[8] = 271195857L;
+        DIGIT_CRCS[9] = 4291279220L;
+    }
+    
     private final Context context;
     
     public AccountNetworkClient(final Context context) {
@@ -120,73 +138,99 @@ public class AccountNetworkClient {
             throws IOException {
         Log.i(TAG, "Encoding login for user " + account.login);
         
-        final File outputFile;
+        // Make a first request to get cookies.
         final HttpURLConnection conn = HttpUtils.newRequest(context,
             "https://mobile.free.fr/moncompte/index.php", cookies);
         try {
             conn.connect();
+            
             final int sc = conn.getResponseCode();
-            if (DEBUG) {
-                Log.d(TAG, "Got response: " + sc);
-            }
             if (sc != HttpURLConnection.HTTP_OK) {
-                throw new IOException("Login encoding failed");
+                throw new IOException("Login encoding failed for user "
+                        + account.login);
             }
             
             HttpUtils.readCookies(conn, cookies);
-            
-            final File outputDir = context.getCacheDir();
-            outputFile = new File(outputDir, "account_login_" + account.login
-                    + ".html");
-            IOUtils.writeToFile(HttpUtils.getInputStream(conn), outputFile);
-            
-            if (DEBUG) {
-                Log.d(TAG,
-                    "Output written to file: " + outputFile.getAbsolutePath());
-            }
         } finally {
             conn.disconnect();
         }
         
         try {
-            final Document doc = Jsoup.parse(outputFile, null);
-            final Elements imgNodes = doc.getElementById("ident_chiffre")
-                    .getElementsByTag("img");
-            final int imgNodesLen = imgNodes.size();
-            
-            final Map<String, String> convert = new HashMap<String, String>(10);
-            for (int i = 0; i < imgNodesLen; ++i) {
-                final Element elem = imgNodes.get(i);
-                final String text = elem.attr("onclick");
-                final int comaPos = text.indexOf(',');
-                final String digit = text.substring(comaPos - 1, comaPos);
-                final String pos = text.substring(comaPos + 2, comaPos + 3);
-                convert.put(digit, pos);
+            final Map<String, String> cipherMap = fetchCipherMap(cookies);
+            if (DEBUG) {
+                Log.d(TAG, "Cipher map for user " + account.login + ": "
+                        + cipherMap);
             }
             
             final StringBuilder encodedLogin = new StringBuilder(10);
             final int loginLen = account.login.length();
+            
             for (int i = 0; i < loginLen; ++i) {
                 final String key = String.valueOf(account.login.charAt(i));
-                final String encoded = convert.get(key);
+                final String encoded = cipherMap.get(key);
+                if (encoded == null) {
+                    throw new IOException("Digit encoding failed for user "
+                            + account.login + ": " + key);
+                }
                 encodedLogin.append(encoded);
             }
             
             if (DEBUG) {
-                Log.d(TAG, "Login encoded: " + account.login + " => "
-                        + encodedLogin + "; map=" + convert);
+                Log.d(TAG, "Login encoded: " + account.login + "=>"
+                        + encodedLogin);
             }
             
             return encodedLogin.toString();
         } catch (IOException e) {
             throw e;
         } catch (Exception e) {
-            final IOException ioe = new IOException("Login encoding failed");
+            final IOException ioe = new IOException(
+                    "Login encoding failed for user " + account.login);
             ioe.initCause(e);
             throw ioe;
-        } finally {
-            outputFile.delete();
         }
+    }
+    
+    private Map<String, String> fetchCipherMap(Set<String> cookies)
+            throws IOException {
+        final Map<String, String> cipherMap = new HashMap<String, String>(10);
+        final File temp = new File(context.getCacheDir(), "digit.png");
+        final byte[] buf = new byte[2048];
+        final CRC32 crc = new CRC32();
+        
+        for (int pos = 0; pos < 10; ++pos) {
+            final String uri = "https://mobile.free.fr/moncompte/chiffre.php?pos="
+                    + pos;
+            HttpUtils.downloadToFile(context, uri, cookies, temp);
+            
+            final InputStream input = new FileInputStream(temp);
+            try {
+                for (int bytesRead; (bytesRead = input.read(buf)) != -1;) {
+                    crc.update(buf, 0, bytesRead);
+                }
+            } finally {
+                IOUtils.close(input);
+                temp.delete();
+            }
+            
+            final long c = crc.getValue();
+            boolean found = false;
+            for (int i = 0; !found && i < DIGIT_CRCS.length; ++i) {
+                if (c == DIGIT_CRCS[i]) {
+                    cipherMap.put(String.valueOf(i), String.valueOf(pos));
+                    found = true;
+                }
+            }
+            
+            if (!found) {
+                throw new IOException("Unknown digit CRC: " + c + "; pos="
+                        + pos);
+            }
+            
+            crc.reset();
+        }
+        
+        return cipherMap;
     }
     
     private File fetchAccountData(String userLogin, Set<String> cookies)

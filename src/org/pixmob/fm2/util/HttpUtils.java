@@ -19,6 +19,7 @@ import static org.pixmob.fm2.Constants.APPLICATION_NAME_USER_AGENT;
 import static org.pixmob.fm2.Constants.DEBUG;
 import static org.pixmob.fm2.Constants.TAG;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -79,6 +80,22 @@ public final class HttpUtils {
             for (final String newCookie : newCookies) {
                 cookies.add(newCookie.split(";", 2)[0]);
             }
+        }
+    }
+    
+    /**
+     * Download a file.
+     */
+    public static void downloadToFile(Context context, String uri,
+            Set<String> cookies, File outputFile) throws IOException {
+        final HttpURLConnection conn = newRequest(context, uri, cookies);
+        try {
+            conn.connect();
+            
+            final InputStream input = getInputStream(conn);
+            IOUtils.writeToFile(input, outputFile);
+        } finally {
+            conn.disconnect();
         }
     }
     
